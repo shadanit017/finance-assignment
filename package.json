@@ -1,0 +1,24 @@
+{
+  "name": "ai-financial-insights",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI Financial-Insights Assistant Full-Stack Monorepo",
+  "scripts": {
+    "dev": "docker compose up --build",
+    "dev:down": "docker compose down",
+    "dev:clean": "docker compose down -v",
+    "logs:backend": "docker compose logs -f backend",
+    "logs:frontend": "docker compose logs -f frontend",
+    "logs:postgres": "docker compose logs -f postgres",
+    "prisma:migrate": "docker compose exec backend npx prisma migrate dev",
+    "prisma:db-push": "docker compose exec backend npx prisma db push",
+    "prisma:seed": "docker compose exec backend npx prisma db seed",
+    "prisma:studio": "docker compose exec backend npx prisma studio",
+    "dataset:download": "npm --prefix backend run dataset:download",
+    "dataset:inspect": "npm --prefix backend run dataset:inspect",
+    "dataset:import": "npm --prefix backend run dataset:import",
+    "dataset:reset": "npm --prefix backend run dataset:reset",
+    "dataset:verify": "npm --prefix backend run dataset:verify"
+  },
+  "devDependencies": {}
+}

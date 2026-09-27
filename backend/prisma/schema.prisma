@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String?
+  password     String?
+  googleId     String?       @unique
+  roleId       String
+  role         Role          @relation(fields: [roleId], references: [id])
+  chatMessages ChatMessage[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([email])
+  @@index([roleId])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender    String
+  role      String
+  question  String?  @db.Text
+  answer    String?  @db.Text
+  payload   Json?
+  error     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model FinancialTransaction {
+  transactionId        String   @id @map("transaction_id") @db.VarChar(64)
+  accountId            String   @map("account_id") @db.VarChar(64)
+  customerId           String   @map("customer_id") @db.VarChar(64)
+  timestamp            DateTime @map("timestamp") @db.Timestamptz
+  amountNgn            Decimal  @map("amount_ngn") @db.Decimal(18, 2)
+  balanceBeforeNgn     Decimal  @map("balance_before_ngn") @db.Decimal(18, 2)
+  balanceAfterNgn      Decimal  @map("balance_after_ngn") @db.Decimal(18, 2)
+  transactionType      String   @map("transaction_type") @db.VarChar(50)
+  channel              String   @map("channel") @db.VarChar(50)
+  merchantCategoryCode String?  @map("merchant_category_code") @db.VarChar(20)
+  merchantName         String?  @map("merchant_name") @db.VarChar(100)
+  locationLga          String?  @map("location_lga") @db.VarChar(100)
+  locationState        String?  @map("location_state") @db.VarChar(100)
+  deviceId             String?  @map("device_id") @db.VarChar(100)
+  status               String   @map("status") @db.VarChar(30)
+  fraudFlag            Boolean  @map("fraud_flag")
+
+  @@index([timestamp])
+  @@index([accountId])
+  @@index([customerId])
+  @@index([transactionType])
+  @@index([channel])
+  @@index([locationState])
+  @@index([fraudFlag])
+  @@map("financial_transactions")
+}
