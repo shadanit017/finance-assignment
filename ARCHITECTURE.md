@@ -8,50 +8,50 @@ This document details the complete system architecture, multi-LLM integration, z
 
 ```mermaid
 flowchart TD
-    subgraph Client["React Client (Vite + TS)"]
-        UI["User Interface (Chat / Admin)"]
+    subgraph Client["React Client"]
+        UI["User Interface"]
     end
 
     subgraph Gateway["NestJS API Gateway"]
-        AuthGuard["Authentication Guard\n(Session / Google OAuth)"]
-        UserContext["User Context & Roles\n(Viewer / Analyst / Admin)"]
+        AuthGuard["Authentication Guard"]
+        UserContext["User Context and Roles"]
     end
 
     subgraph AIService["AI Query Planner Engine"]
-        MultiLLM["Multi-LLM Provider Router\n(Gemini 2.5 Flash / Claude 3.5 / GPT-4o-mini)"]
-        QueryPlan["Structured QueryPlan JSON Generation"]
+        MultiLLM["Multi-LLM Provider Router"]
+        QueryPlan["Structured QueryPlan Generation"]
     end
 
     subgraph SecurityEngine["Zero-Trust Security Engine"]
-        Validator["QueryPlan Validator\n(Schema & Injection Filter)"]
-        PolicyEngine["Server-Side Policy Engine\n(Capability & Field-Level PolicyCheck)"]
+        Validator["QueryPlan Validator"]
+        PolicyEngine["Server-Side Policy Engine"]
         SqlBuilder["Allowlisted Parameterized SQL Builder"]
     end
 
-    subgraph DataLayer["Database & Data Engine"]
+    subgraph DataLayer["Database and Data Engine"]
         Postgres[(PostgreSQL 16 Database)]
         DuckDB[DuckDB Bulk Ingestion Engine]
     end
 
     subgraph ResponseEngine["Grounded Answer Synthesis"]
-        Normalizer["Result Normalizer & RBAC Evidence Builder"]
+        Normalizer["Result Normalizer and Evidence Builder"]
         AnswerSynthesizer["AI Grounded Answer Formatter"]
     end
 
-    UI -->|1. POST /api/assistant/ask| AuthGuard
+    UI -->|"1. POST /api/assistant/ask"| AuthGuard
     AuthGuard --> UserContext
     UserContext --> MultiLLM
     MultiLLM --> QueryPlan
     QueryPlan --> Validator
     Validator --> PolicyEngine
-    PolicyEngine -->|2a. DENY (Forbidden)| UI
-    PolicyEngine -->|2b. ALLOW| SqlBuilder
-    SqlBuilder -->|3. Parameterized Safe SQL| Postgres
-    Postgres -->|4. Raw Database Rows| Normalizer
+    PolicyEngine -->|"2a. DENY - Forbidden"| UI
+    PolicyEngine -->|"2b. ALLOW"| SqlBuilder
+    SqlBuilder -->|"3. Parameterized Safe SQL"| Postgres
+    Postgres -->|"4. Raw Database Rows"| Normalizer
     Normalizer --> AnswerSynthesizer
-    AnswerSynthesizer -->|5. Grounded NL Answer + Evidence JSON| UI
+    AnswerSynthesizer -->|"5. Grounded NL Answer + Evidence JSON"| UI
 
-    DuckDB -->|High-Speed COPY Stream Ingestion| Postgres
+    DuckDB -->|"High-Speed COPY Stream Ingestion"| Postgres
 ```
 
 ---
@@ -88,19 +88,19 @@ sequenceDiagram
     participant Postgres as PostgreSQL Container
 
     Docker->>Importer: Launch dataset import step
-    Importer->>Postgres: SELECT COUNT(*) FROM financial_transactions
-    alt Data Already Imported (>0 rows)
-        Postgres-->>Importer: Row count = 5,000,000
+    Importer->>Postgres: SELECT COUNT FROM financial_transactions
+    alt Data Already Imported
+        Postgres-->>Importer: Row count = 5000000
         Importer-->>Docker: Skip import (Instant startup)
-    else Clean / Fresh Database (0 rows)
-        Importer->>Downloader: Check/Download Hugging Face Parquet (167 MB)
-        Importer->>Postgres: Drop PK & Indexes temporarily
-        Importer->>DuckDB: Execute COPY (SELECT strftime(timestamp...), ROUND(...) FROM read_parquet) TO 'import_temp.csv'
-        DuckDB-->>Importer: CSV Export Complete (~2-3 secs)
-        Importer->>Postgres: Stream CSV via binary COPY protocol (pg-copy-streams)
-        Postgres-->>Importer: 5,000,000 rows inserted (~10 secs)
-        Importer->>Postgres: Re-create Primary Key & B-Tree Indexes
-        Importer-->>Docker: Import complete!
+    else Clean Fresh Database
+        Importer->>Downloader: Check or Download Hugging Face Parquet
+        Importer->>Postgres: Drop PK and Indexes temporarily
+        Importer->>DuckDB: Export Parquet to import_temp.csv
+        DuckDB-->>Importer: CSV Export Complete
+        Importer->>Postgres: Stream CSV via binary COPY protocol
+        Postgres-->>Importer: 5000000 rows inserted
+        Importer->>Postgres: Re-create Primary Key and B-Tree Indexes
+        Importer-->>Docker: Import complete
     end
 ```
 
